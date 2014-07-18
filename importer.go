@@ -51,7 +51,7 @@ func (i *importer) printStat() {
 		if i.booksImported[k] != nil {
 			prefix = "(new)"
 		}
-		title := shortenString(v.title, 50)
+		title := shortenString(v.Title, 50)
 		fmt.Printf("  %s %5d %s\n", prefix, i.bookClippings[k], title)
 	}
 }
@@ -90,10 +90,10 @@ func (i *importer) read(r io.Reader) {
 		case 3:
 			continue
 		default:
-			if c.content != "" {
-				c.content += "\n"
+			if c.Content != "" {
+				c.Content += "\n"
 			}
-			c.content += line
+			c.Content += line
 		}
 
 	}
@@ -102,10 +102,10 @@ func (i *importer) read(r io.Reader) {
 func (i *importer) extractBook(str string, c *clipping) {
 	ix := strings.LastIndex(str, " (")
 	if ix < 0 {
-		c.book.title = str
+		c.Book.Title = str
 	} else {
-		c.book.title = str[:ix]
-		c.book.authors = str[ix+2 : len(str)-1]
+		c.Book.Title = str[:ix]
+		c.Book.Authors = str[ix+2 : len(str)-1]
 	}
 }
 
@@ -123,7 +123,7 @@ func (i *importer) extractAddDate(str string, c *clipping) {
 	if err != nil {
 		log.Fatalln("Cannot parse date:", dateStr)
 	}
-	c.creationTime = t.Unix()
+	c.CreationTime = t.Unix()
 }
 
 func (i *importer) extractLocation(str string, c *clipping) {
@@ -133,23 +133,23 @@ func (i *importer) extractLocation(str string, c *clipping) {
 	if err != nil {
 		log.Fatalln("Cannot parse start page", pageStr[0], "in", str)
 	}
-	c.loc.start = ii
+	c.Loc.Start = ii
 
 	if len(pageStr) == 2 {
 		ii, err = strconv.Atoi(pageStr[1])
 		if err != nil {
 			log.Fatalln("Cannot pares end page", pageStr[1], "in", str)
 		}
-		c.loc.end = ii
+		c.Loc.End = ii
 	} else {
-		c.loc.end = ii
+		c.Loc.End = ii
 	}
 }
 
 func (i *importer) processClipping(c *clipping) {
 	i.clippingsProcessed++
 
-	if c.content == "" {
+	if c.Content == "" {
 		i.emptyClippings++
 		return
 	}
@@ -160,12 +160,12 @@ func (i *importer) processClipping(c *clipping) {
 	}
 	defer tx.Commit()
 
-	bookId := c.book.getId()
+	bookId := c.Book.getId()
 
 	_, err = tx.Exec(`insert into clipping (id, book, loc_start, loc_end, creation_time, content)
 		values($1, $2, $3, $4, $5, $6)`,
-		c.getId(), bookId, c.loc.start, c.loc.end, c.creationTime, c.content)
-	i.booksProcessed[bookId] = &c.book
+		c.getId(), bookId, c.Loc.Start, c.Loc.End, c.CreationTime, c.Content)
+	i.booksProcessed[bookId] = &c.Book
 	i.bookClippings[bookId]++
 	if err != nil {
 		if isUniqueError(err) {
@@ -176,14 +176,14 @@ func (i *importer) processClipping(c *clipping) {
 	i.clippingsImported++
 
 	_, err = tx.Exec("insert into book (id, title, authors) values($1, $2, $3)",
-		bookId, c.book.title, c.book.authors)
+		bookId, c.Book.Title, c.Book.Authors)
 	if err != nil {
 		if isUniqueError(err) {
 			return
 		}
 		log.Fatalln("Cannot insert book", err)
 	}
-	i.booksImported[bookId] = &c.book
+	i.booksImported[bookId] = &c.Book
 
 }
 

@@ -6,16 +6,16 @@ import (
 )
 
 type location struct {
-	start, end int
+	Start, End int
 }
 
 type book struct {
-	title   string
-	authors string
+	Title   string
+	Authors string
 }
 
 func (b book) getId() string {
-	return getHash(b.title + b.authors)
+	return getHash(b.Title + b.Authors)
 }
 
 func getHash(str string) string {
@@ -24,12 +24,12 @@ func getHash(str string) string {
 }
 
 type clipping struct {
-	book         book
-	loc          location
-	creationTime int64
-	content      string
+	Book         book
+	Loc          location
+	CreationTime int64
+	Content      string
 }
 
 func (c *clipping) getId() string {
-	return getHash(c.book.getId() + c.content)
+	return getHash(c.Book.getId() + c.Content)
 }
