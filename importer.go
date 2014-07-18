@@ -51,13 +51,16 @@ func (i *importer) printStat() {
 		if i.booksImported[k] != nil {
 			prefix = "(new)"
 		}
-		title := v.title
-		if len(title) > 50 {
-			title = title[:50] + "..."
-		}
+		title := shortenString(v.title, 50)
 		fmt.Printf("  %s %5d %s\n", prefix, i.bookClippings[k], title)
 	}
+}
 
+func shortenString(str string, n int) string {
+	if len(str) > n {
+		str = str[:n] + "..."
+	}
+	return str
 }
 
 func (i *importer) read(r io.Reader) {
