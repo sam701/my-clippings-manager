@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"log"
 	"os"
@@ -15,6 +16,8 @@ type clippingHandler func(*rawClipping)
 type parser struct {
 	handler clippingHandler
 }
+
+var bom = []byte{0xef, 0xbb, 0xbf}
 
 func (p *parser) parseClippingFile(clippingFile string) {
 	f, err := os.Open(clippingFile)
@@ -77,6 +80,9 @@ func (i *parser) parse(r io.Reader) {
 }
 
 func (i *parser) extractBook(str string, c *rawClipping) {
+	if bytes.HasPrefix([]byte(str), bom) {
+		str = str[3:]
+	}
 	ix := strings.LastIndex(str, " (")
 	if ix < 0 {
 		c.Book.Title = str
