@@ -20,9 +20,9 @@ func main() {
 	defer db.Close()
 
 	if *flagListBooks {
-		listBooks()
+		oracle{}.listBooks()
 	} else if *fileToImport != "" {
-		importFunc(*fileToImport)
+		newImporter().importClippings(*fileToImport)
 	} else if *bookHtmlFile != "" && *bookId != "" {
 		createBookHtml(*bookId, *bookHtmlFile)
 	} else {

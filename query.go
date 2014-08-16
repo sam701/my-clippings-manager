@@ -5,7 +5,9 @@ import (
 	"log"
 )
 
-func listBooks() {
+type oracle struct{}
+
+func (o oracle) listBooks() {
 	rows, err := db.Query("select id, title, authors from book order by title")
 	if err != nil {
 		log.Fatalln(err)

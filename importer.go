@@ -1,26 +1,29 @@
 package main
 
 import (
-	"bufio"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
-	"io"
 	"log"
-	"os"
-	"strconv"
 	"strings"
-	"time"
 )
 
-func importFunc(clippingFile string) {
-	f, err := os.Open(clippingFile)
-	if err != nil {
-		log.Fatalln("Cannot open file", err.Error())
-	}
-	defer f.Close()
+func (b book) getId() string {
+	return getHash(b.Title + ":" + b.Authors)
+}
 
-	im := newImporter()
-	im.read(f)
-	im.printStat()
+func getHash(str string) string {
+	bb := sha1.Sum([]byte(str))
+	return hex.EncodeToString(bb[:])
+}
+
+type dbClipping struct {
+	*baseClipping
+	Note string
+}
+
+func (c *dbClipping) getId() string {
+	return getHash(c.Book.getId() + ":" + c.Content + ":" + c.Note)
 }
 
 func newImporter() *importer {
@@ -38,6 +41,20 @@ type importer struct {
 	booksProcessed     map[string]*book
 	booksImported      map[string]*book
 	bookClippings      map[string]int
+	prev               *rawClipping
+}
+
+func (i *importer) importClippings(clippingFile string) {
+	p := &parser{i.processRawClipping}
+	p.parseClippingFile(clippingFile)
+	i.printStat()
+}
+
+func shortenString(str string, n int) string {
+	if len(str) > n {
+		str = str[:n] + "..."
+	}
+	return str
 }
 
 func (i *importer) printStat() {
@@ -56,104 +73,23 @@ func (i *importer) printStat() {
 	}
 }
 
-func shortenString(str string, n int) string {
-	if len(str) > n {
-		str = str[:n] + "..."
-	}
-	return str
-}
-
-func (i *importer) read(r io.Reader) {
-	c := new(clipping)
-
-	lineNo := 0
-
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		lineNo++
-
-		if line == "==========" {
-			lineNo = 0
-			if c != nil {
-				i.processClipping(c)
-			}
-			c = new(clipping)
-			continue
-		}
-
-		switch lineNo {
-		case 1:
-			i.extractBook(line, c)
-		case 2:
-			i.extractLocationAndDate(line, c)
-		case 3:
-			continue
-		default:
-			if c.Content != "" {
-				c.Content += "\n"
-			}
-			c.Content += line
-		}
-
-	}
-}
-
-func (i *importer) extractBook(str string, c *clipping) {
-	ix := strings.LastIndex(str, " (")
-	if ix < 0 {
-		c.Book.Title = str
-	} else {
-		c.Book.Title = str[:ix]
-		c.Book.Authors = str[ix+2 : len(str)-1]
-	}
-}
-
-func (i *importer) extractLocationAndDate(str string, c *clipping) {
-	ix := strings.LastIndex(str, " | ")
-
-	i.extractLocation(str[:ix], c)
-	i.extractAddDate(str[ix+3:], c)
-}
-
-func (i *importer) extractAddDate(str string, c *clipping) {
-	ix := strings.Index(str, ",")
-	dateStr := str[ix+2:]
-	t, err := time.Parse("January 2, 2006 3:04:05 PM", dateStr)
-	if err != nil {
-		log.Fatalln("Cannot parse date:", dateStr)
-	}
-	c.CreationTime = t.Unix()
-}
-
-func (i *importer) extractLocation(str string, c *clipping) {
-	ix := strings.LastIndex(str, " ")
-	pageStr := strings.Split(str[ix+1:], "-")
-	ii, err := strconv.Atoi(pageStr[0])
-	if err != nil {
-		log.Fatalln("Cannot parse start page", pageStr[0], "in", str)
-	}
-	c.Loc.Start = ii
-
-	if len(pageStr) == 2 {
-		ii, err = strconv.Atoi(pageStr[1])
-		if err != nil {
-			log.Fatalln("Cannot pares end page", pageStr[1], "in", str)
-		}
-		c.Loc.End = ii
-	} else {
-		c.Loc.End = ii
-	}
-}
-
-func (i *importer) processClipping(c *clipping) {
+func (i *importer) processRawClipping(rc *rawClipping) {
 	i.clippingsProcessed++
 
-	if c.Content == "" {
+	if rc.Content == "" {
 		i.emptyClippings++
-		return
+	} else if rc.cType == highlight {
+		c := &dbClipping{&rc.baseClipping, ""}
+		if i.prev != nil && i.prev.cType == note {
+			c.Note = i.prev.Content
+		}
+		i.importClipping(c)
 	}
 
+	i.prev = rc
+}
+
+func (i *importer) importClipping(c *dbClipping) {
 	tx, err := db.Begin()
 	if err != nil {
 		log.Fatalln("Cannot start transaction:", err)
@@ -162,9 +98,9 @@ func (i *importer) processClipping(c *clipping) {
 
 	bookId := c.Book.getId()
 
-	_, err = tx.Exec(`insert into clipping (id, book, loc_start, loc_end, creation_time, content)
-		values($1, $2, $3, $4, $5, $6)`,
-		c.getId(), bookId, c.Loc.Start, c.Loc.End, c.CreationTime, c.Content)
+	_, err = tx.Exec(`insert into clipping (id, book, loc_start, loc_end, creation_time, content, note)
+		values($1, $2, $3, $4, $5, $6, $7)`,
+		c.getId(), bookId, c.Loc.Start, c.Loc.End, c.CreationTime, c.Content, c.Note)
 	i.booksProcessed[bookId] = &c.Book
 	i.bookClippings[bookId]++
 	if err != nil {

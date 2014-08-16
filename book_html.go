@@ -33,6 +33,10 @@ const (
 				padding-bottom: 10px;
 				border-top: 1px solid #ddd;
 			}
+			.note {
+				margin-left: 1cm;
+				color: #959595;
+			}
 		</style>
 	</head>
 	<body>
@@ -42,6 +46,9 @@ const (
 		{{range .Clippings}}
 			<div class="clipping">
 				<div class="content">{{.Content}}</div>
+				{{ if .Note}}
+					<div class="note">{{.Note}}</div>
+				{{end}}
 			</div>
 		{{end}}
 		</div>
@@ -51,7 +58,7 @@ const (
 
 type bookHtmlData struct {
 	Book      book
-	Clippings []*clipping
+	Clippings []*dbClipping
 }
 
 func createBookHtml(bookId string, outputFile string) {
@@ -69,17 +76,18 @@ func createBookHtml(bookId string, outputFile string) {
 	err = row.Scan(&bookHash, &data.Book.Title, &data.Book.Authors)
 	failOnError(err)
 
-	rows, err := db.Query(`select loc_start, loc_end, creation_time, content
+	rows, err := db.Query(`select loc_start, loc_end, creation_time, content, note
 		from clipping
 		where book = $1
 		order by loc_start, creation_time
 		`, bookHash)
 	failOnError(err)
 
-	data.Clippings = make([]*clipping, 0, 500)
+	data.Clippings = make([]*dbClipping, 0, 500)
 	for rows.Next() {
-		c := new(clipping)
-		err = rows.Scan(&c.Loc.Start, &c.Loc.End, &c.CreationTime, &c.Content)
+		c := new(dbClipping)
+		c.baseClipping = new(baseClipping)
+		err = rows.Scan(&c.Loc.Start, &c.Loc.End, &c.CreationTime, &c.Content, &c.Note)
 		failOnError(err)
 		data.Clippings = append(data.Clippings, c)
 	}
