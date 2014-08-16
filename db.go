@@ -42,7 +42,8 @@ func initDb(db *sql.DB) {
 			loc_end int,
 			creation_time int,
 			content text,
-			note text
+			note text,
+			import_time int
 		);`,
 		`create index clipping_book on clipping(book);`,
 	}

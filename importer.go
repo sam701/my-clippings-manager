@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 )
 
 func (b book) getId() string {
@@ -42,9 +43,11 @@ type importer struct {
 	booksImported      map[string]*book
 	bookClippings      map[string]int
 	prev               *rawClipping
+	currentTime        int64
 }
 
 func (i *importer) importClippings(clippingFile string) {
+	i.currentTime = time.Now().Unix()
 	p := &parser{i.processRawClipping}
 	p.parseClippingFile(clippingFile)
 	i.printStat()
@@ -98,9 +101,11 @@ func (i *importer) importClipping(c *dbClipping) {
 
 	bookId := c.Book.getId()
 
-	_, err = tx.Exec(`insert into clipping (id, book, loc_start, loc_end, creation_time, content, note)
-		values($1, $2, $3, $4, $5, $6, $7)`,
-		c.getId(), bookId, c.Loc.Start, c.Loc.End, c.CreationTime, c.Content, c.Note)
+	_, err = tx.Exec(`insert into clipping (id, book, loc_start, loc_end, creation_time, 
+		content, note, import_time)
+		values($1, $2, $3, $4, $5, $6, $7, $8)`,
+		c.getId(), bookId, c.Loc.Start, c.Loc.End, c.CreationTime,
+		c.Content, c.Note, i.currentTime)
 	i.booksProcessed[bookId] = &c.Book
 	i.bookClippings[bookId]++
 	if err != nil {
