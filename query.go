@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"github.com/wsxiaoys/terminal/color"
 	"log"
 )
 
@@ -21,6 +21,6 @@ func (o oracle) listBooks() {
 		}
 		title = shortenString(title, 50)
 		authors = shortenString(authors, 50)
-		fmt.Printf("%s\n  %s\n  %s\n", id[:10], title, authors)
+		color.Printf("@{y!}%s@|\n  @!%s@|\n  %s\n", id[:10], title, authors)
 	}
 }
