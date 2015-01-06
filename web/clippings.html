@@ -1,0 +1,12 @@
+<div>
+  <h2>Clippings</h2>
+  <h3>{{currentBook.Title}}</h3>
+  <h4>{{currentBook.Authors}}</h4>
+  <table class="table">
+    <tr ng-repeat="clip in book.clippings">
+      <td>
+        <div>{{clip.Content}}</div>
+      </td>
+    </tr>
+  </table>
+</div>
