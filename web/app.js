@@ -1,4 +1,4 @@
-angular.module('MyClippings', ['ui.router'])
+angular.module('MyClippings', ['ui.router', 'angularFileUpload'])
 .config(function($stateProvider, $urlRouterProvider){
   $urlRouterProvider.otherwise('/books');
   $stateProvider
@@ -11,7 +11,13 @@ angular.module('MyClippings', ['ui.router'])
       url: '/books/:bookId',
       templateUrl: 'clippings.html',
       controller: 'ClippingsCtrl'
-    });
+    })
+	.state('uploads', {
+		url: '/uploads',
+		templateUrl: 'uploads.html',
+		controller: 'UploadsCtrl'
+	})
+	;
 })
 .controller('BooksCtrl', function($scope, $http) {
     $http.get("/books").success(function(data){
@@ -24,5 +30,11 @@ angular.module('MyClippings', ['ui.router'])
         clippings: data
       };
     });
+})
+.controller('UploadsCtrl', function($scope, FileUploader){
+	$scope.uploader = new FileUploader({
+		url: '/upload',
+		autoUpload: true
+	});
 })
 ;

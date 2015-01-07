@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
+type httpHandler struct{}
+
 func StartHttpServer() {
-	//now := time.Now()
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path[1:]
 		if path == "" {
@@ -22,15 +22,18 @@ func StartHttpServer() {
 		_, name := filepath.Split(path)
 		b, err := Asset(path)
 		if err == nil {
-			http.ServeContent(w, r, name, time.Now(), bytes.NewReader(b))
+			info, _ := AssetInfo(path)
+			http.ServeContent(w, r, name, info.ModTime(), bytes.NewReader(b))
 		} else {
 			log.Println("ERROR:", err)
 			http.NotFound(w, r)
 		}
 	})
-	http.HandleFunc("/books", writeJsonBooks)
-	http.HandleFunc("/books/", writeJsonBookClippings)
-	http.ListenAndServe(":3333", nil)
+	h := &httpHandler{}
+	http.HandleFunc("/books", h.books)
+	http.HandleFunc("/books/", h.clippings)
+	http.HandleFunc("/upload", h.fileUpload)
+	http.ListenAndServe("127.0.0.1:3333", nil)
 }
 
 func httpInternalError(w http.ResponseWriter, err error) {
@@ -45,7 +48,7 @@ func writeJson(w http.ResponseWriter, obj interface{}) error {
 	return en.Encode(obj)
 }
 
-func writeJsonBooks(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) books(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query("select id, title, authors from book order by title")
 	if err != nil {
 		httpInternalError(w, err)
@@ -73,7 +76,7 @@ func writeJsonBooks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeJsonBookClippings(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) clippings(w http.ResponseWriter, r *http.Request) {
 	bookId := strings.Split(r.URL.Path, "/")[2]
 
 	rows, err := db.Query(`select loc_start, loc_end, creation_time, content
@@ -104,4 +107,14 @@ func writeJsonBookClippings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJson(w, out)
+}
+
+func (h *httpHandler) fileUpload(w http.ResponseWriter, r *http.Request) {
+	file, headers, err := r.FormFile("file")
+	if err != nil {
+		httpInternalError(w, err)
+		return
+	}
+	defer file.Close()
+	log.Println("HEADERS:", headers.Filename)
 }
