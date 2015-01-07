@@ -11,6 +11,36 @@ import (
 	"time"
 )
 
+type location struct {
+	Start, End int
+}
+
+type book struct {
+	Title   string
+	Authors string
+}
+
+type baseClipping struct {
+	Book         book
+	Loc          location
+	CreationTime int64
+	Content      string
+}
+
+type clippingType int
+
+const (
+	undefined clippingType = iota
+	highlight
+	note
+	bookmark
+)
+
+type rawClipping struct {
+	baseClipping
+	cType clippingType
+}
+
 type clippingHandler func(*rawClipping)
 
 type parser struct {
@@ -27,20 +57,6 @@ func (p *parser) parseClippingFile(clippingFile string) {
 	defer f.Close()
 
 	p.parse(f)
-}
-
-type clippingType int
-
-const (
-	undefined clippingType = iota
-	highlight
-	note
-	bookmark
-)
-
-type rawClipping struct {
-	baseClipping
-	cType clippingType
 }
 
 func (i *parser) parse(r io.Reader) {
@@ -135,7 +151,7 @@ func (i *parser) extractLocation(str string, c *rawClipping) {
 	if len(pageStr) == 2 {
 		ii, err = strconv.Atoi(pageStr[1])
 		if err != nil {
-			log.Fatalln("Cannot pares end page", pageStr[1], "in", str)
+			log.Fatalln("Cannot parse end page", pageStr[1], "in", str)
 		}
 		c.Loc.End = ii
 	} else {
