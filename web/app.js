@@ -36,5 +36,11 @@ angular.module('MyClippings', ['ui.router', 'angularFileUpload'])
 		url: '/upload',
 		autoUpload: true
 	});
+	$scope.uploader.onSuccessItem = function() {
+		console.log('on success');
+	};
+	$scope.uploader.onCompleteAll = function(){
+		console.log('complete all');
+	};
 })
 ;

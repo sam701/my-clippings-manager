@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"io"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +17,10 @@ type location struct {
 type book struct {
 	Title   string
 	Authors string
+}
+
+func (b book) id() string {
+	return makeHash(b.Title + b.Title)
 }
 
 type baseClipping struct {
@@ -48,16 +51,6 @@ type parser struct {
 }
 
 var bom = []byte{0xef, 0xbb, 0xbf}
-
-func (p *parser) parseClippingFile(clippingFile string) {
-	f, err := os.Open(clippingFile)
-	if err != nil {
-		log.Fatalln("Cannot open file", err.Error())
-	}
-	defer f.Close()
-
-	p.parse(f)
-}
 
 func (i *parser) parse(r io.Reader) {
 	c := new(rawClipping)

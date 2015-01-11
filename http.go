@@ -13,7 +13,8 @@ import (
 
 type httpHandler struct{}
 
-func StartHttpServer() {
+// Returns the URL
+func StartHttpServer() string {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path[1:]
 		if path == "" {
@@ -33,7 +34,9 @@ func StartHttpServer() {
 	http.HandleFunc("/books", h.books)
 	http.HandleFunc("/books/", h.clippings)
 	http.HandleFunc("/upload", h.fileUpload)
-	http.ListenAndServe("127.0.0.1:3333", nil)
+	base := "127.0.0.1:3333"
+	go http.ListenAndServe(base, nil)
+	return "http://" + base
 }
 
 func httpInternalError(w http.ResponseWriter, err error) {
@@ -77,6 +80,8 @@ func (h *httpHandler) books(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *httpHandler) clippings(w http.ResponseWriter, r *http.Request) {
+	defer handleInternalError(w)
+
 	bookId := strings.Split(r.URL.Path, "/")[2]
 
 	rows, err := db.Query(`select loc_start, loc_end, creation_time, content
@@ -84,10 +89,7 @@ func (h *httpHandler) clippings(w http.ResponseWriter, r *http.Request) {
 		where book = $1
 		order by loc_start, creation_time
 		`, bookId)
-	if err != nil {
-		httpInternalError(w, err)
-		return
-	}
+	panicOnError(err)
 
 	type clip struct {
 		LocStart, LocEnd int
@@ -99,22 +101,28 @@ func (h *httpHandler) clippings(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var c clip
 		err = rows.Scan(&c.LocStart, &c.LocEnd, &c.CreationTime, &c.Content)
-		if err != nil {
-			httpInternalError(w, err)
-			return
-		}
+		panicOnError(err)
 		out = append(out, &c)
 	}
 
 	writeJson(w, out)
 }
 
-func (h *httpHandler) fileUpload(w http.ResponseWriter, r *http.Request) {
-	file, headers, err := r.FormFile("file")
-	if err != nil {
-		httpInternalError(w, err)
-		return
+func handleInternalError(w http.ResponseWriter) {
+	if r := recover(); r != nil {
+		log.Println(alog.ERROR, "Recovered:", r)
+		w.WriteHeader(500)
+		w.Write([]byte(fmt.Sprintln(r)))
 	}
+}
+
+func (h *httpHandler) fileUpload(w http.ResponseWriter, r *http.Request) {
+	defer handleInternalError(w)
+
+	file, headers, err := r.FormFile("file")
+	panicOnError(err)
 	defer file.Close()
-	log.Println("HEADERS:", headers.Filename)
+
+	stat := importClippings(file, headers.Filename)
+	writeJson(w, stat)
 }
