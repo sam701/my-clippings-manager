@@ -18,8 +18,6 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	db := openDb(*dbFile)
-	defer db.Close()
 
 	storage = NewStorage()
 	err := openUrl(StartHttpServer())

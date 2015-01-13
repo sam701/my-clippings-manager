@@ -1,9 +1,9 @@
 <div>
   <h2>Books</h2>
   <table class="table table-striped">
-    <tr ng-repeat="book in books">
+    <tr ng-repeat="(id,book) in books">
       <td>
-        <div><a href="#/books/{{book.Id}}">{{book.Title}}</a></div>
+        <div><a href="#/books/{{id}}">{{book.Title}}</a></div>
         <small class="text-muted">{{book.Authors}}</small>
       </td>
     </tr>

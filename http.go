@@ -52,60 +52,13 @@ func writeJson(w http.ResponseWriter, obj interface{}) error {
 }
 
 func (h *httpHandler) books(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("select id, title, authors from book order by title")
-	if err != nil {
-		httpInternalError(w, err)
-		return
-	}
-
-	type book struct {
-		Id, Title, Authors string
-	}
-	out := make([]*book, 0, 100)
-
-	for rows.Next() {
-		var b book
-		err = rows.Scan(&b.Id, &b.Title, &b.Authors)
-		if err != nil {
-			httpInternalError(w, err)
-			return
-		}
-		out = append(out, &b)
-	}
-
-	err = writeJson(w, out)
-	if err != nil {
-		httpInternalError(w, err)
-	}
+	http.ServeFile(w, r, storage.bookIndexFileName())
 }
 
 func (h *httpHandler) clippings(w http.ResponseWriter, r *http.Request) {
 	defer handleInternalError(w)
-
 	bookId := strings.Split(r.URL.Path, "/")[2]
-
-	rows, err := db.Query(`select loc_start, loc_end, creation_time, content
-		from clipping
-		where book = $1
-		order by loc_start, creation_time
-		`, bookId)
-	panicOnError(err)
-
-	type clip struct {
-		LocStart, LocEnd int
-		CreationTime     int64
-		Content          string
-	}
-
-	out := make([]*clip, 0, 500)
-	for rows.Next() {
-		var c clip
-		err = rows.Scan(&c.LocStart, &c.LocEnd, &c.CreationTime, &c.Content)
-		panicOnError(err)
-		out = append(out, &c)
-	}
-
-	writeJson(w, out)
+	http.ServeFile(w, r, storage.bookFileName(bookId))
 }
 
 func handleInternalError(w http.ResponseWriter) {

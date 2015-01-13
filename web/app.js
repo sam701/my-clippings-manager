@@ -26,9 +26,7 @@ angular.module('MyClippings', ['ui.router', 'angularFileUpload'])
 })
 .controller('ClippingsCtrl', function($scope, $http, $stateParams) {
     $http.get("/books/" + $stateParams.bookId).success(function(data){
-      $scope.book = {
-        clippings: data
-      };
+      $scope.book = data;
     });
 })
 .controller('UploadsCtrl', function($scope, FileUploader){

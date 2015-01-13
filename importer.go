@@ -1,10 +1,14 @@
 package main
 
 import (
+	"a4world/util/alog"
 	"bytes"
+	"crypto/md5"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"io"
+	"log"
 	"time"
 )
 
@@ -43,7 +47,10 @@ func importClippings(r io.Reader, fileName string) *importStat {
 	io.Copy(buf, r)
 
 	// Store the file first
-	storage.saveUploadFile(bytes.NewReader(buf.Bytes()), fileName)
+	if !storage.saveUploadFile(bytes.NewReader(buf.Bytes()), fmt.Sprintf("%x", md5.Sum(buf.Bytes()))) {
+		log.Println(alog.INFO, "File already exists. Skipping.")
+		return nil
+	}
 
 	var i importer
 	i.currentTime = time.Now().Unix()
@@ -124,7 +131,7 @@ func (i *importer) getBookData(b book) *bookImportData {
 	data := i.importedBooks[bookId]
 	if data == nil {
 		bd := storage.readBook(bookId)
-		if bd == nil {
+		if len(bd.Clippings) == 0 {
 			bd = &bookData{
 				Title:     b.Title,
 				Authors:   b.Authors,

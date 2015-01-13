@@ -2,8 +2,6 @@ package main
 
 import (
 	"a4world/util/alog"
-	"archive/tar"
-	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"io"
@@ -11,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"time"
 )
 
 type bookData struct {
@@ -60,7 +57,8 @@ type clStorage struct {
 
 func NewStorage() *clStorage {
 	dir := defaultStorageDir()
-	os.MkdirAll(dir, 0755)
+	os.MkdirAll(filepath.Join(dir, "uploads"), 0755)
+	os.MkdirAll(filepath.Join(dir, "books"), 0755)
 	return &clStorage{dir}
 }
 
@@ -80,10 +78,6 @@ func defaultStorageDir() string {
 		}
 		return filepath.Join(home, ".config", name)
 	}
-}
-
-func (s *clStorage) uploadArchiveTarFileName() string {
-	return filepath.Join(s.dir, "uploadsArchive.tar")
 }
 
 func (s *clStorage) uploadIndexFileName() string {
@@ -112,40 +106,31 @@ func (s *clStorage) saveUploadItem(r io.Reader, item *uploadItem) {
 	panicOnError(json.NewEncoder(f).Encode(ix))
 }
 
-// Appends to the tar archive
-func (s *clStorage) saveUploadFile(r io.Reader, fileName string) {
-	f, err := os.OpenFile(s.uploadArchiveTarFileName(), os.O_CREATE|os.O_RDWR, 0644)
+// Returns false if such file already exists.
+func (s *clStorage) saveUploadFile(r io.Reader, uploadId string) bool {
+	fn := s.uploadFileName(uploadId)
+	if _, err := os.Stat(fn); !os.IsNotExist(err) {
+		return false
+	}
+	f, err := os.OpenFile(fn, os.O_CREATE|os.O_RDWR, 0644)
 	panicOnError(err)
 	defer f.Close()
 
 	// gzip first
-	var buf bytes.Buffer
-	gw := gzip.NewWriter(&buf)
+	gw := gzip.NewWriter(f)
+	defer gw.Close()
 	io.Copy(gw, r)
-	gw.Close()
 
-	stat, err := f.Stat()
-	panicOnError(err)
-	if stat.Size() > 1024 { // Skip the tar tail
-		f.Seek(-1024, os.SEEK_END)
-	}
-	w := tar.NewWriter(f)
-	defer w.Close()
+	log.Println(alog.DEBUG, "Saved uploaded file:", uploadId)
+	return true
+}
 
-	size := len(buf.Bytes())
-	w.WriteHeader(&tar.Header{
-		Name:    fileName + ".gz",
-		Size:    int64(size),
-		Mode:    0644,
-		ModTime: time.Now(),
-	})
-	_, err = io.Copy(w, bytes.NewReader(buf.Bytes()))
-	panicOnError(err)
-	log.Println(alog.DEBUG, "Saved uploaded file:", fileName)
+func (s *clStorage) uploadFileName(uploadId string) string {
+	return filepath.Join(s.dir, "uploads", uploadId+".txt.gz")
 }
 
 func (s *clStorage) bookFileName(bookId string) string {
-	return filepath.Join(s.dir, "book"+bookId+".json")
+	return filepath.Join(s.dir, "books", bookId+".json")
 }
 
 // Return if read
