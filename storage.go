@@ -41,8 +41,6 @@ type bookIndex map[string]*indexBook
 
 type uploadItem struct {
 	Id               string
-	UploadTime       int64
-	FileName         string
 	FileSize         int
 	ClippingsTotalNo int
 	EmptyClippingsNo int
@@ -85,25 +83,13 @@ func (s *clStorage) uploadIndexFileName() string {
 }
 
 func (s *clStorage) readUploadsIndex() uploadsIndex {
-	f, err := os.Open(s.uploadIndexFileName())
-	panicOnError(err)
-	defer f.Close()
 	var ix uploadsIndex
-	err = json.NewDecoder(f).Decode(&ix)
-	panicOnError(err)
+	readJsonFile(s.uploadIndexFileName(), &ix)
 	return ix
 }
 
-func (s *clStorage) saveUploadItem(r io.Reader, item *uploadItem) {
-	ix := s.readUploadsIndex()
-
-	// Write index
-	f, err := os.OpenFile(s.uploadIndexFileName(), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0611)
-	panicOnError(err)
-	defer f.Close()
-
-	ix = append(ix, item)
-	panicOnError(json.NewEncoder(f).Encode(ix))
+func (s *clStorage) saveUploadsIndex(ix uploadsIndex) {
+	writeJsonFile(s.uploadIndexFileName(), ix)
 }
 
 // Returns false if such file already exists.

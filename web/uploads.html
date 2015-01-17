@@ -2,8 +2,24 @@
 	<h2>Uploads</h2>
 	<div class="jumbotron" nv-file-drop uploader="uploader">
 		<i class="glyphicon glyphicon-info-sign"></i>
-		<i class="text-muted">To upload a "My Clippings.txt" just drop it on this area.</i>
+		<i class="text-muted">To upload a "My Clippings.txt" file just drop it on this area.</i>
 	</div>
 	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>ID</td>
+				<th class="text-right">Books #</th>
+				<th class="text-right">Clippings #</th>
+				<th class="text-right">File Size</td>
+			</tr>
+		</thead>
+		<tbody>
+			<tr ng-repeat="u in uploads.slice().reverse()" ng-class="u.cl">
+				<td ng-class="u.cl">{{u.Id}}</td>
+				<td class="text-right">{{u.BooksNo}}</td>
+				<td class="text-right">{{u.ClippingsTotalNo}}</td>
+				<td class="text-right">{{u.FileSize | bytes}}</td>
+			</tr>
+		</tbody>
 	</table>
 </div>

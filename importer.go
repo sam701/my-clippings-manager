@@ -6,7 +6,6 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"log"
 	"time"
@@ -32,35 +31,51 @@ type dbClipping struct {
 	Note string
 }
 
-type importStat struct {
-}
-
 type importer struct {
 	prev        *rawClipping
 	currentTime int64
 
 	importedBooks map[string]*bookImportData
+	uploadedItem  *uploadItem
 }
 
-func importClippings(r io.Reader, fileName string) *importStat {
+func importClippings(r io.Reader, fileName string) *uploadItem {
 	buf := new(bytes.Buffer)
 	io.Copy(buf, r)
 
+	upIndex := storage.readUploadsIndex()
+
 	// Store the file first
-	if !storage.saveUploadFile(bytes.NewReader(buf.Bytes()), fmt.Sprintf("%x", md5.Sum(buf.Bytes()))) {
+	md5Hash := md5.Sum(buf.Bytes())
+	uploadId := hex.EncodeToString(md5Hash[:])
+	if !storage.saveUploadFile(bytes.NewReader(buf.Bytes()), uploadId) {
 		log.Println(alog.INFO, "File already exists. Skipping.")
+		for _, v := range upIndex {
+			if v.Id == uploadId {
+				return v
+			}
+		}
 		return nil
 	}
 
 	var i importer
 	i.currentTime = time.Now().Unix()
+	i.uploadedItem = &uploadItem{
+		Id:       uploadId,
+		FileSize: len(buf.Bytes()),
+	}
 
 	i.importedBooks = make(map[string]*bookImportData)
 
 	p := &parser{i.processRawClipping}
 	p.parse(bytes.NewReader(buf.Bytes()))
 
+	i.uploadedItem.BooksNo = len(i.importedBooks)
+
 	// save
+	upIndex = append(upIndex, i.uploadedItem)
+	storage.saveUploadsIndex(upIndex)
+
 	for k, v := range i.importedBooks {
 		if v.modified() {
 			storage.saveBook(k, v.data)
@@ -68,7 +83,7 @@ func importClippings(r io.Reader, fileName string) *importStat {
 	}
 	i.updateBookIndex()
 
-	return nil
+	return i.uploadedItem
 }
 
 func (i *importer) updateBookIndex() {
@@ -98,6 +113,7 @@ func (i *importer) updateBookIndex() {
 
 func (i *importer) processRawClipping(rc *rawClipping) {
 	if rc.cType == highlight {
+		i.uploadedItem.ClippingsTotalNo++
 		c := &dbClipping{&rc.baseClipping, ""}
 		if i.prev != nil && i.prev.cType == note {
 			c.Note = i.prev.Content

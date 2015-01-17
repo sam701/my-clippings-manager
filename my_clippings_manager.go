@@ -2,7 +2,6 @@ package main
 
 import (
 	"a4world/util/asignal"
-	"flag"
 	"log"
 	"os/exec"
 	"runtime"
@@ -11,14 +10,6 @@ import (
 var storage *clStorage
 
 func main() {
-	dbFile := flag.String("db", "", "File path to the clipping DB (will be created if not exists)")
-	flag.Parse()
-
-	if *dbFile == "" {
-		flag.PrintDefaults()
-		return
-	}
-
 	storage = NewStorage()
 	err := openUrl(StartHttpServer())
 	if err != nil {

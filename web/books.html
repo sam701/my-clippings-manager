@@ -1,11 +1,15 @@
 <div>
   <h2>Books</h2>
   <table class="table table-striped">
-    <tr ng-repeat="(id,book) in books">
-      <td>
-        <div><a href="#/books/{{id}}">{{book.Title}}</a></div>
-        <small class="text-muted">{{book.Authors}}</small>
-      </td>
+    <tr ng-repeat="book in books">
+	 	<td>
+			<div><a href="#/books/{{book.id}}">{{book.Title}}</a></div>
+			<small class="text-muted">{{book.Authors}}</small>
+		</td>
+		<td class="text-right small book-info">
+			<div>{{book.ClippingsTimes.LastFormatted}}</div>
+			<div class="badge">{{book.ClippingsNo}}</div>
+		</td>	
     </tr>
   </table>
 </div>

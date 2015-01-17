@@ -34,6 +34,7 @@ func StartHttpServer() string {
 	http.HandleFunc("/books", h.books)
 	http.HandleFunc("/books/", h.clippings)
 	http.HandleFunc("/upload", h.fileUpload)
+	http.HandleFunc("/uploadIndex", h.fileUploadIndex)
 	base := "127.0.0.1:3333"
 	go http.ListenAndServe(base, nil)
 	return "http://" + base
@@ -49,6 +50,10 @@ func writeJson(w http.ResponseWriter, obj interface{}) error {
 	w.Header().Add("Content-Type", "application/json")
 	en := json.NewEncoder(w)
 	return en.Encode(obj)
+}
+
+func (h *httpHandler) fileUploadIndex(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, storage.uploadIndexFileName())
 }
 
 func (h *httpHandler) books(w http.ResponseWriter, r *http.Request) {
@@ -76,6 +81,6 @@ func (h *httpHandler) fileUpload(w http.ResponseWriter, r *http.Request) {
 	panicOnError(err)
 	defer file.Close()
 
-	stat := importClippings(file, headers.Filename)
-	writeJson(w, stat)
+	uploadedFileData := importClippings(file, headers.Filename)
+	writeJson(w, uploadedFileData)
 }
