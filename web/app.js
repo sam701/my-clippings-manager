@@ -32,7 +32,13 @@ angular.module('MyClippings', ['ui.router', 'angularFileUpload'])
 })
 .controller('ClippingsCtrl', function($scope, $http, $stateParams) {
     $http.get("/books/" + $stateParams.bookId).success(function(data){
-      $scope.book = data;
+		var d = _.map(data.Clippings, function(v,k){
+			v.id = k;
+			return v;
+		});
+		d = _.sortBy(d, function(v){return v.Loc.Start});
+		data.Clippings = d;
+		$scope.book = data;
     });
 })
 .controller('UploadsCtrl', function($scope, $http, FileUploader){
