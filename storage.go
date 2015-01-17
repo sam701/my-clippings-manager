@@ -55,6 +55,7 @@ type clStorage struct {
 
 func NewStorage() *clStorage {
 	dir := defaultStorageDir()
+	log.Println(alog.DEBUG, "Storage dir:", dir)
 	os.MkdirAll(filepath.Join(dir, "uploads"), 0755)
 	os.MkdirAll(filepath.Join(dir, "books"), 0755)
 	return &clStorage{dir}
