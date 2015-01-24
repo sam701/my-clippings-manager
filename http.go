@@ -7,11 +7,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
-type httpHandler struct{}
+type httpHandler struct {
+	lastCallTime time.Time
+}
 
 // Returns the URL
 func StartHttpServer() string {
@@ -30,14 +34,33 @@ func StartHttpServer() string {
 			http.NotFound(w, r)
 		}
 	})
-	h := &httpHandler{}
+
+	h := &httpHandler{time.Now()}
 	http.HandleFunc("/books", h.books)
 	http.HandleFunc("/books/", h.clippings)
 	http.HandleFunc("/upload", h.fileUpload)
 	http.HandleFunc("/uploadIndex", h.fileUploadIndex)
 	base := "127.0.0.1:3333"
-	go http.ListenAndServe(base, nil)
+	go http.ListenAndServe(base, h.callWrapper())
+	go h.checkShutdown()
 	return "http://" + base
+}
+
+func (h *httpHandler) callWrapper() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.lastCallTime = time.Now()
+		http.DefaultServeMux.ServeHTTP(w, r)
+	})
+}
+
+func (h *httpHandler) checkShutdown() {
+	for t := range time.Tick(5 * time.Minute) {
+		if t.Sub(h.lastCallTime) > 10*time.Minute {
+			log.Println("Not used for more than 10min. Shutting down...")
+			time.Sleep(time.Second)
+			os.Exit(0)
+		}
+	}
 }
 
 func httpInternalError(w http.ResponseWriter, err error) {
