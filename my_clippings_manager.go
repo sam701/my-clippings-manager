@@ -1,5 +1,6 @@
 package main
 
+//go:generate $GOPATH/bin/go-bindata -prefix web web
 import (
 	"a4world/util/asignal"
 	"log"
