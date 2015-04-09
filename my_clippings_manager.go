@@ -2,10 +2,12 @@ package main
 
 //go:generate $GOPATH/bin/go-bindata -prefix web web
 import (
-	"a4world/util/asignal"
 	"log"
+	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
+	"syscall"
 )
 
 var storage *clStorage
@@ -17,7 +19,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	asignal.WaitForShutdown(nil)
+	waitForShutdown()
 }
 
 func openUrl(url string) error {
@@ -31,4 +33,11 @@ func openUrl(url string) error {
 	default:
 		return exec.Command("xdg-open", url).Run()
 	}
+}
+
+func waitForShutdown() {
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	<-c
+	log.Println("INFO: Shutting down...")
 }

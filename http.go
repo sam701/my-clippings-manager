@@ -1,7 +1,6 @@
 package main
 
 import (
-	"a4world/util/alog"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -64,7 +63,7 @@ func (h *httpHandler) checkShutdown() {
 }
 
 func httpInternalError(w http.ResponseWriter, err error) {
-	log.Println(alog.ERROR, err)
+	log.Println("ERROR:", err)
 	w.WriteHeader(500)
 	w.Write([]byte(fmt.Sprintln("Internal server error:", err)))
 }
@@ -91,7 +90,7 @@ func (h *httpHandler) clippings(w http.ResponseWriter, r *http.Request) {
 
 func handleInternalError(w http.ResponseWriter) {
 	if r := recover(); r != nil {
-		log.Println(alog.ERROR, "Recovered:", r)
+		log.Println("ERROR: Recovered:", r)
 		w.WriteHeader(500)
 		w.Write([]byte(fmt.Sprintln(r)))
 	}

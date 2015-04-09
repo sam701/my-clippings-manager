@@ -1,7 +1,6 @@
 package main
 
 import (
-	"a4world/util/alog"
 	"bytes"
 	"crypto/md5"
 	"crypto/sha1"
@@ -49,7 +48,7 @@ func importClippings(r io.Reader, fileName string) *uploadItem {
 	md5Hash := md5.Sum(buf.Bytes())
 	uploadId := hex.EncodeToString(md5Hash[:])
 	if !storage.saveUploadFile(bytes.NewReader(buf.Bytes()), uploadId) {
-		log.Println(alog.INFO, "File already exists. Skipping.")
+		log.Println("INFO: File already exists. Skipping.")
 		for _, v := range upIndex {
 			if v.Id == uploadId {
 				return v

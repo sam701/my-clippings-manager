@@ -1,7 +1,6 @@
 package main
 
 import (
-	"a4world/util/alog"
 	"compress/gzip"
 	"encoding/json"
 	"io"
@@ -55,7 +54,7 @@ type clStorage struct {
 
 func NewStorage() *clStorage {
 	dir := defaultStorageDir()
-	log.Println(alog.DEBUG, "Storage dir:", dir)
+	log.Println("DEBUG: Storage dir:", dir)
 	os.MkdirAll(filepath.Join(dir, "uploads"), 0755)
 	os.MkdirAll(filepath.Join(dir, "books"), 0755)
 	return &clStorage{dir}
@@ -108,7 +107,7 @@ func (s *clStorage) saveUploadFile(r io.Reader, uploadId string) bool {
 	defer gw.Close()
 	io.Copy(gw, r)
 
-	log.Println(alog.DEBUG, "Saved uploaded file:", uploadId)
+	log.Println("DEBUG: Saved uploaded file:", uploadId)
 	return true
 }
 
